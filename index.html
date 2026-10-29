@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer"><title>PayChaser prototype</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&display=swap">
+<style>
+:root{--bg:#f2f5f3;--card:#fff;--ink:#12263a;--mute:#5f7183;--line:#dde4e0;--ok:#0b8a5f;--late:#d2405a;--warn:#c98a10;--acc:#2f45e8;--accInk:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1a24;--card:#162634;--ink:#e8eef3;--mute:#93a5b5;--line:#243847;--ok:#3ccf97;--late:#ff6b85;--warn:#f0b43c;--acc:#7b8cff;--accInk:#0e1a24;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1a24;--card:#162634;--ink:#e8eef3;--mute:#93a5b5;--line:#243847;--ok:#3ccf97;--late:#ff6b85;--warn:#f0b43c;--acc:#7b8cff;--accInk:#0e1a24;color-scheme:dark}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.45 Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums;padding-bottom:84px}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1,h2,h3{margin:0;font-weight:800;letter-spacing:-.02em}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.top b{font-size:18px}
+select,input,textarea,button{font:inherit;color:inherit}
+select,input,textarea{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%}
+.top select{width:auto;padding:6px 8px}
+.hero{padding:6px 0 18px}
+.hero small{color:var(--mute)}
+.big{font-size:44px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.age{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line);margin:12px 0 6px}
+.age i{display:block;height:100%}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--mute);font-size:12.5px}
+.legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;background:var(--c)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.mute{color:var(--mute);font-size:13px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;border:1px solid currentColor}
+.late{color:var(--late)}.ok{color:var(--ok)}.warn{color:var(--warn)}
+.btn{border:0;background:var(--acc);color:var(--accInk);padding:9px 14px;border-radius:9px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,nav button:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.acts{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{flex:1;background:none;border:0;padding:10px 4px;font-weight:600;color:var(--mute);cursor:pointer;border-radius:8px}
+nav button[aria-current="true"]{color:var(--acc)}
+.bars{display:flex;gap:8px;align-items:flex-end;height:96px;margin-top:10px}
+.bars div{flex:1;text-align:center;font-size:12px;color:var(--mute)}
+.bars i{display:block;background:var(--acc);border-radius:6px 6px 0 0;min-height:3px;margin-bottom:4px}
+.score{font-weight:800;font-size:22px}
+.log{font-size:13.5px;border-top:1px solid var(--line);padding:7px 0}
+label{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+textarea{min-height:120px;resize:vertical}
+.empty{color:var(--mute);padding:8px 0}
+@media (prefers-reduced-motion:no-preference){.age i{transition:width .5s}}
+</style>
+</head>
+<body>
+<main>
+ <div class="top"><b>PayChaser</b>
+  <select id="cur" aria-label="Currency"><option>$</option><option>£</option><option>€</option><option>R</option></select></div>
+ <div id="view"></div>
+</main>
+<nav id="nav">
+ <button data-t="today">Today</button><button data-t="inv">Invoices</button><button data-t="cli">Clients</button>
+</nav>
+<script>
+var S={tab:"today",cur:"$",chase:null,add:false,log:[],inv:[],exp:12000};
+function iso(o){var d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+o);return d.toISOString().slice(0,10)}
+function dd(a,b){return Math.round((new Date(a+"T12:00:00")-new Date(b+"T12:00:00"))/864e5)}
+var T=iso(0);
+function seed(){S.inv=[
+ {id:1,c:"Northwind Studio",d:"Brand identity",a:2400,due:iso(-18),paid:null,n:0,r:{k:"inst",d:""}},
+ {id:2,c:"Kora Labs",d:"Monthly retainer",a:3500,due:iso(-9),paid:null,n:1,p:iso(-2)},
+ {id:3,c:"Bright Agency",d:"Landing page build",a:1800,due:iso(-3),paid:null,n:0,b:"po",tx:iso(-1)},
+ {id:4,c:"Amara Foods",d:"Packaging design",a:950,due:iso(5),paid:null,n:0},
+ {id:5,c:"Kora Labs",d:"Workshop",a:1500,due:iso(12),paid:null,n:0},
+ {id:6,c:"Kora Labs",d:"Retainer (last)",a:3500,due:iso(-40),paid:iso(-28),n:2},
+ {id:7,c:"Northwind Studio",d:"Logo",a:1200,due:iso(-60),paid:iso(-41),n:3},
+ {id:8,c:"Bright Agency",d:"Audit",a:800,due:iso(-50),paid:iso(-49),n:0}]}
+try{var sv=localStorage.getItem("pc5");if(sv){var p=JSON.parse(sv);if(Array.isArray(p.inv)&&Array.isArray(p.log)){S.inv=p.inv;S.log=p.log}}}catch(e){}
+if(!S.inv.length)seed();
+function save(){try{localStorage.setItem("pc5",JSON.stringify({inv:S.inv,log:S.log}))}catch(e){}}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function m(n){return S.cur+Math.round(n).toLocaleString("en-US")}
+function late(i){return i.paid?0:dd(T,i.due)}
+function tone(l){return l<=0?"Friendly":l<7?"Gentle nudge":l<14?"Firm":"Final notice"}
+function avgLate(c){var xs=S.inv.filter(function(i){return i.c===c}).map(function(i){return i.paid?Math.max(0,dd(i.paid,i.due)):Math.max(0,late(i))});
+ return xs.length?xs.reduce(function(a,b){return a+b},0)/xs.length:0}
+function score(c){return Math.max(5,Math.round(100-avgLate(c)*3.5))}
+function label(s){return s>=75?["Reliable","ok"]:s>=45?["Slow","warn"]:["Risky","late"]}
+function unpaid(){return S.inv.filter(function(i){return!i.paid})}
+function draft(i){var l=late(i),t=tone(l),a=m(i.a),h="Hi "+i.c.split(" ")[0]+",\n\n";
+ if(t==="Friendly")return h+"Quick heads-up that invoice #"+i.id+" ("+i.d+", "+a+") is due "+(l===0?"today":"in "+(-l)+" days")+". Here’s the pay-now link whenever suits: pay.paychaser.app/"+i.id+"\n\nThanks!";
+ if(t==="Gentle nudge")return h+"Invoice #"+i.id+" ("+i.d+", "+a+") passed its due date "+l+" days ago. It may have slipped through. You can pay in one tap here: pay.paychaser.app/"+i.id+"\n\nIf something’s holding it up, tell me and we’ll sort it out.";
+ if(t==="Firm")return h+"Invoice #"+i.id+" ("+a+") is now "+l+" days overdue. Please pay today, or reply with the date you will. If it helps, I can split it into two instalments: pay.paychaser.app/"+i.id;
+ return h+"Invoice #"+i.id+" ("+a+") is now "+l+" days overdue and I would like to get this settled. Please pay by "+iso(3)+" or reply with a date that works. If anything is blocking payment, tell me and we will fix it. Pay now: pay.paychaser.app/"+i.id}
+function expDay(i){return Math.max(1,dd(i.due,T)+Math.round(avgLate(i.c)))}
+var BL={dispute:{t:"Disputed amount",act:"They dispute the amount. Review the invoice and agree a corrected figure before chasing again."},po:{t:"Needs a purchase order",act:"They need a purchase order. Send the PO details and ask for the PO number."},miss:{t:"Never received it",act:"They say they never got it. Resend the invoice to the right contact."},det:{t:"Details need correcting",act:"Invoice details are wrong. Issue a corrected invoice, then restart reminders."}};
+function has(t,a){return a.some(function(w){return t.indexOf(w)>-1})}
+function classify(t){t=" "+t.toLowerCase().replace(/[^a-z ]/g," ")+" ";
+ if(has(t,["dispute","too much","wrong amount","incorrect amount","overcharg"]))return"dispute";
+ if(has(t,["purchase order"," po ","po number"]))return"po";
+ if(has(t,["never received","not receive","didn t receive","did not receive","didn t get","not received"]))return"miss";
+ if(has(t,["wrong name","wrong address","wrong email","wrong details","incorrect details","tax number","vat number","correct details"]))return"det";
+ return""}
+function nextAction(i){var l=late(i);if(i.r)return RQ[i.r.k].act;
+ if(i.b)return BL[i.b].act;
+ if(broken(i))return"Missed their promise. Call or send a firm follow-up and ask for a part-payment.";
+ if(i.n>=3)return"Ignored "+i.n+" reminders. Time to call them yourself.";
+ if(l>=14)return"Send the final notice and offer two instalments.";
+ if(l>=7)return"Send a firm reminder with a pay-now link.";
+ if(l>0)return"Send a friendly reminder with a pay-now link.";
+ return"Not due yet."}
+function onTime(c){var x=S.inv.filter(function(i){return i.c===c&&(i.paid||late(i)>0)});if(!x.length)return 100;return Math.round(x.filter(function(i){return i.paid&&dd(i.paid,i.due)<=0}).length/x.length*100)}
+function kept(c){var b=S.inv.filter(function(i){return i.c===c&&broken(i)}).length;return b?b+" missed promise"+(b>1?"s":""):"no missed promises"}
+function planHTML(){
+ var all=unpaid().filter(function(i){return late(i)>0}),u=all.slice().sort(function(a,b){return priority(b)-priority(a)}).slice(0,4);
+ var tot=all.reduce(function(s,i){return s+i.a},0),stuck=all.filter(function(i){return i.b}).reduce(function(s,i){return s+i.a},0);
+ var h='<div class="card" style="border-color:var(--acc)"><div class="mute">Get me paid</div><div class="big ok" style="font-size:34px">'+m(tot)+'</div><p class="mute" style="margin:2px 0 8px">Overdue and potentially collectible this week. An estimate, not guaranteed cash.'+(stuck?' '+m(stuck)+' is stuck on a client issue.':'')+'</p><b>Collection plan for today</b>';
+ h+=u.length?u.map(function(i,k){var hi=k===0||late(i)>=14;return'<div class="log"><div class="row"><span><b>'+(k+1)+'. '+esc(i.c)+' - '+m(i.a)+'</b> <span class="pill '+(hi?"late":"warn")+'">'+(hi?"High priority":"Follow up")+'</span><div class="mute">'+late(i)+' days late. '+nextAction(i)+'</div></span><button class="btn ghost" data-chase="'+i.id+'">Act</button></div></div>'}).join(""):'<p class="empty">Nothing overdue. Nice.</p>';
+ return h+'</div>'}
+function cashIn(hz,mode){return unpaid().reduce(function(s,i){var e=mode==="best"?Math.max(1,dd(i.due,T)):Math.max(1,dd(i.due,T)+Math.round(avgLate(i.c))+(mode==="slow"?10:0));return e<=hz?s+i.a:s},0)}
+function scen(){var hz=S.hz||30,rows=[["Best case","best","everyone pays on the due date"],["Expected","exp","clients pay as they usually do"],["Delayed","slow","10 days later than usual"]];
+ var h='<div class="card"><h3>Cash scenarios</h3><label for="hz">Look ahead</label><select id="hz">'+[7,14,30,60].map(function(d){return'<option value="'+d+'"'+(d===hz?" selected":"")+'>'+d+' days</option>'}).join("")+'</select>';
+ rows.forEach(function(r){var v=cashIn(hz,r[1]),g=S.exp*hz/30-v;h+='<div class="log"><div class="row"><span><b>'+r[0]+'</b><div class="mute">'+r[2]+'</div></span><span style="text-align:right"><b>'+m(v)+'</b><div class="'+(g>0?"late":"ok")+'" style="font-size:12.5px">'+(g>0?"short "+m(g):"covered")+'</div></span></div></div>'});
+ return h+'</div>'}
+var RQ={time:{t:"asked for more time",act:"Client asked for more time. Approve the new date or decline."},inst:{t:"asked to pay in instalments",act:"Client asked to pay in instalments. Approve or decline the plan."},recv:{t:"says they never got the invoice",act:"Client says they never got it. Resend it to the right contact."},appr:{t:"is waiting for internal approval",act:"Client is waiting on internal approval. Agree a date and check back."},q:{t:"has a question",act:"Client has a question. Reply to them before chasing."}};
+function rqTxt(r){return RQ[r.k].t+(r.d?" ("+r.d+")":"")}
+function preview(){var a=unpaid().filter(function(i){return late(i)>0&&!(i.p&&dd(i.p,T)>=0)&&!i.b&&!i.r});return"Will send: "+a.map(function(i){return tone(late(i)).toLowerCase()+" to "+i.c}).join("; ")+". Nothing sends until you press the button."}
+function dueSoon(){var a=unpaid().filter(function(i){return late(i)<=0&&late(i)>=-5});
+ if(!a.length)return"";return'<div class="card"><h3>Before payment is due</h3>'+a.map(function(i){return'<div class="log"><b>'+esc(i.c)+'</b> '+m(i.a)+' due in '+(-late(i))+' days<div class="mute">Send a friendly check: did they get it, and do they need a purchase order?</div></div>'}).join("")+'</div>'}
+function health(){var all=S.inv.filter(function(i){return i.paid||late(i)>0}),n=all.length||1;
+ var ontime=all.filter(function(i){return i.paid&&dd(i.paid,i.due)<=0}).length,pct=Math.round(ontime/n*100);
+ var avg=all.reduce(function(s,i){return s+Math.max(0,i.paid?dd(i.paid,i.due):late(i))},0)/n;
+ var od=unpaid().filter(function(i){return late(i)>0}).length,sc=Math.max(0,Math.min(100,Math.round(100-avg*3-od/Math.max(1,S.inv.length)*40)));
+ var tip=S.inv.some(function(i){return!i.paid&&(i.b||i.r)})?"Resolve client issues first: they block payment.":avg>7?"Ask slow payers for a deposit before starting work.":"Confirm clients received each invoice before it is due.";
+ var col=sc>=75?"ok":sc>=50?"warn":"late";
+ return'<div class="card"><h3>Payment health</h3><div class="row" style="align-items:center"><div class="big '+col+'" style="font-size:40px">'+sc+'<span class="mute" style="font-size:14px"> /100</span></div><span class="mute" style="text-align:right">'+pct+'% paid on time<br>avg delay '+Math.round(avg)+' days<br>'+od+' overdue now</span></div><p style="margin:8px 0 0"><b>Next improvement:</b> '+tip+'</p><p class="mute" style="margin:6px 0 0">Formula: 100 minus 3 per average day late, minus up to 40 for the share of invoices overdue. Based on '+all.length+' invoices.</p></div>'}
+function coach(){var h='<div class="card"><h3>Cash coach</h3><p class="mute" style="margin:4px 0 8px">Ask about your business. Answers use your invoices and costs, and are estimates.</p><div class="acts"><button class="btn ghost" data-q="a">Can I cover my costs?</button><button class="btn ghost" data-q="b">Who should I chase today?</button><button class="btn ghost" data-q="c">Biggest client 2 weeks late?</button></div>';
+ if(S.ans)h+='<p style="margin:10px 0 0">'+esc(S.ans)+'</p>';return h+'</div>'}
+function answer(k){var u=unpaid(),v;
+ if(k==="a"){v=cashIn(30,"exp");return v>=S.exp?"Yes, on expected timing: "+m(v)+" should arrive in 30 days against "+m(S.exp)+" of costs.":"Not yet. You expect "+m(v)+" in 30 days against "+m(S.exp)+" of costs, a gap of "+m(S.exp-v)+"."}
+ if(k==="b"){var t=u.filter(function(i){return late(i)>0}).sort(function(a,b){return priority(b)-priority(a)})[0];return t?t.c+" ("+m(t.a)+"). "+nextAction(t):"Nothing is overdue today."}
+ var by={};u.forEach(function(i){by[i.c]=(by[i.c]||0)+i.a});var big=Object.keys(by).sort(function(a,b){return by[b]-by[a]})[0];if(!big)return"No unpaid invoices.";
+ v=u.reduce(function(s,i){var e=expDay(i)+(i.c===big?14:0);return e<=30?s+i.a:s},0);return"If "+big+" ("+m(by[big])+" owed) pays two weeks late, you expect "+m(v)+" in 30 days, "+(v>=S.exp?"still covering your costs.":"short by "+m(S.exp-v)+" against your costs.")}
+var BIZ="Your Studio";
+function tok(){var a=new Uint8Array(16);crypto.getRandomValues(a);return Array.prototype.map.call(a,function(x){return("0"+x.toString(16)).slice(-2)}).join("")}
+function tk(i){if(!i.tk)i.tk=tok();if(!i.tx)i.tx=iso(30);return i.tk}
+function dateOK(d){if(!d||d.length!==10||isNaN(Date.parse(d)))return false;var x=dd(d,T);return x>=0&&x<=60}
+function clientView(){
+ var i=S.inv.filter(function(x){return x.id===S.cv})[0],v=document.getElementById("view");tk(i);
+ var b='',h='<div class="card" style="border-color:var(--warn)"><div class="row" style="align-items:center"><span class="mute">Preview of the client page. Your client will not see this bar.</span><button class="btn ghost" id="exitcv">Exit preview</button></div></div>';
+ if(i.paid)b='<h2>Thank you</h2><p>This invoice is paid. No further action is needed.</p>';
+ else if(dd(i.tx,T)<0)b='<h2>This link has expired</h2><p>For your security, payment links stop working after a while. Please ask '+esc(BIZ)+' to send you a new one.</p>';
+ else if((i.ta||0)>=5)b='<h2>Too many attempts</h2><p>This page is locked. Please contact '+esc(BIZ)+' directly.</p>';
+ else if(i.r)b='<h2>Request received</h2><p>'+esc(BIZ)+' has your request ('+esc(rqTxt(i.r))+') and will reply to you. Nothing else is needed from you.</p>';
+ else b='<div class="mute">From '+esc(BIZ)+'</div><h2 style="margin:4px 0">Invoice #'+i.id+'</h2><div class="big" style="font-size:36px">'+m(i.a)+'</div><p class="mute" style="margin:2px 0 10px">'+esc(i.d)+' · due '+i.due+(late(i)>0?' · overdue':'')+'</p><p>We know things get busy. Choose what works for you.</p><div class="acts" style="flex-direction:column"><button class="btn" data-k="pay">Pay securely</button><button class="btn ghost" data-k="time">Request more time</button><button class="btn ghost" data-k="inst">Request instalments</button><button class="btn ghost" data-k="recv">I have not received the invoice</button><button class="btn ghost" data-k="appr">Waiting for internal approval</button><button class="btn ghost" data-k="q">Ask a question</button></div><label for="cd">Date you can pay (for more time, within 60 days)</label><input id="cd" type="date"><label for="cn">Message (optional, up to 300 characters)</label><textarea id="cn" maxlength="300" style="min-height:70px"></textarea><div id="cerr" class="late" style="margin-top:6px"></div>';
+ h+='<div class="card">'+b+'</div><div class="card"><b>What protects this page</b><div class="mute" style="margin-top:6px">A private, random link (not the invoice number) that expires on '+i.tx+'. It shows only this invoice, with no account and no other client data. Card details are handled by the payment provider, never by PayChaser. Repeated attempts are limited, and messages are length-checked and shown as plain text.</div><p class="mute" style="margin:8px 0 0;font-size:12.5px">Link in a real email: pay.paychaser.app/'+i.tk.slice(0,10)+'... In this prototype these protections are simulated. The live product enforces them on the server.</p></div>';
+ v.innerHTML=h;
+ document.getElementById("exitcv").onclick=function(){S.cv=null;render()};
+ [].forEach.call(v.querySelectorAll("[data-k]"),function(bt){bt.onclick=function(){var k=bt.dataset.k,d=document.getElementById("cd").value,n=(document.getElementById("cn").value||"").replace(/[<>]/g,"").trim().slice(0,300),er=document.getElementById("cerr");
+  i.ta=(i.ta||0)+1;
+  if(k==="time"&&!dateOK(d)){er.textContent="Please pick a date within the next 60 days.";save();return}
+  if(k==="pay"){i.paid=T;S.log.unshift("Payment received via client page: "+m(i.a)+" from "+i.c)}
+  else{i.r={k:k,d:k==="time"?d:"",n:n};S.log.unshift(i.c+" "+rqTxt(i.r))}
+  save();render()}});
+}
+var PLAN=15;
+function recovered(){return S.inv.filter(function(i){return i.paid&&i.n>0}).reduce(function(s,i){return s+i.a},0)}
+function priority(i){return i.a*(1+late(i)/7)*(2-score(i.c)/100)}
+function broken(i){return!i.paid&&!!i.p&&dd(T,i.p)>0}
+function extra(){
+ var r=recovered(),nx=S.inv.filter(function(i){return i.paid&&i.n>0}).length;
+ var u=unpaid().filter(function(i){return late(i)>0}).sort(function(a,b){return priority(b)-priority(a)}).slice(0,3);
+ var h='<div class="card"><h3>Paid after a reminder</h3><div class="big ok" style="font-size:32px">'+m(r)+'</div><p class="mute" style="margin:4px 0 0">'+nx+' invoices were paid once chasing started. That covers '+Math.floor(r/PLAN)+' months of a '+m(PLAN)+' plan. About '+(Math.round(S.inv.reduce(function(s,i){return s+i.n},0)*5/6)/10)+' hours of chasing saved at 5 minutes a reminder (estimate).</p></div>';
+ h+=planHTML()+dueSoon();
+ var in30=unpaid().reduce(function(s,i){return expDay(i)<=30?s+i.a:s},0),gap=S.exp-in30;
+ h+='<div class="card"><h3>Cash check, next 30 days</h3><label for="ex">Your monthly costs</label><input id="ex" type="number" min="0" value="'+S.exp+'"><p style="margin:10px 0 0" class="'+(gap>0?'late':'ok')+'"><b>'+(gap>0?'Expected shortfall: '+m(gap)+'. Chase the invoices above first.':'Covered: you expect '+m(in30)+' against '+m(S.exp)+' of costs.')+'</b></p></div>';
+ h+=scen();h+=health();h+=coach();
+ return h}
+function today(){
+ var u=unpaid(),tot=u.reduce(function(s,i){return s+i.a},0),b=[0,0,0,0],od=u.filter(function(i){return late(i)>0});
+ u.forEach(function(i){var l=late(i);b[l<=0?0:l<7?1:l<14?2:3]+=i.a});
+ var cols=["var(--ok)","var(--warn)","#e8743b","var(--late)"],names=["Not due","1-6 days late","7-13 days late","14+ days late"];
+ var wk=[0,0,0,0];u.forEach(function(i){var w=Math.min(3,Math.floor((expDay(i)-1)/7));wk[w]+=i.a});
+ var mx=Math.max.apply(null,wk.concat([1]));
+ var q=od.filter(function(i){return!(i.p&&dd(i.p,T)>=0)&&!i.b&&!i.r}).length;
+ var h='<div class="hero"><small>Owed to you right now</small><div class="big">'+m(tot)+'</div><div class="age" role="img" aria-label="Aging of unpaid invoices">'+
+ b.map(function(v,k){return'<i style="width:'+(tot?v/tot*100:0)+'%;background:'+cols[k]+'"></i>'}).join("")+'</div><div class="legend">'+
+ names.map(function(n,k){return'<span style="--c:'+cols[k]+'">'+n+" "+m(b[k])+'</span>'}).join("")+'</div></div>';
+ h+=extra()+'<div class="card"><h3>Autopilot</h3><p class="mute" style="margin:6px 0 0">'+(q?q+" overdue invoice"+(q>1?"s":"")+" ready to chase today, each with a tone matched to its age. Clients who promised a date are skipped until it passes.":"Nothing overdue. Nice.")+'</p>'+
+ (q?'<div class="mute" style="margin-top:8px">'+preview()+'</div><div class="acts"><button class="btn" id="auto">Send '+q+' reminder'+(q>1?"s":"")+'</button></div>':"")+'</div>';
+ h+='<div class="card"><h3>Cash expected, next 4 weeks</h3><p class="mute" style="margin:4px 0 0">Based on how each client has paid you before.</p><div class="bars">'+
+ wk.map(function(v,k){return'<div><i style="height:'+Math.round(v/mx*70)+'px"></i>'+(v?m(v):"–")+'<br>wk '+(k+1)+'</div>'}).join("")+'</div></div>';
+ h+='<div class="card"><h3>Activity</h3>'+(S.log.length?S.log.slice(0,6).map(function(x){return'<div class="log">'+esc(x)+'</div>'}).join(""):'<p class="empty">No reminders sent yet. Try Autopilot above.</p>')+'</div>';
+ return h}
+function invs(){
+ var h='<div class="row" style="margin-bottom:12px"><h2>Invoices</h2><button class="btn" id="new">New invoice</button></div>';
+ if(S.add){h+='<div class="card"><label for="fc">Client</label><input id="fc" placeholder="Client name"><div id="hint" class="late" style="margin-top:6px;font-size:13px"></div><label for="fd">For</label><input id="fd" placeholder="What the invoice covers"><label for="fa">Amount</label><input id="fa" type="number" min="1" inputmode="decimal"><label for="fu">Due in (days)</label><input id="fu" type="number" value="14"><div class="acts"><button class="btn" id="save">Create invoice</button><button class="btn ghost" id="cancel">Cancel</button></div></div>'}
+ if(S.chase){var i=S.inv.filter(function(x){return x.id===S.chase})[0];
+  h+='<div class="card"><h3>Chase invoice #'+i.id+'</h3><p class="mute" style="margin:4px 0 0">Suggested tone: '+tone(late(i))+'. Edit before sending.</p><label for="ch">Channel</label><select id="ch"><option>Email</option><option>WhatsApp</option></select><label for="pr">Client promised a payment date (optional)</label><input id="pr" type="date"><label><input id="ip" type="checkbox" style="width:auto;margin-right:8px">Offer two instalments</label><label for="msg">Message</label><textarea id="msg">'+esc(draft(i))+'</textarea><div class="acts"><button class="btn" id="send">Send reminder</button><button class="btn ghost" id="cancel">Cancel</button></div></div>'}
+ if(S.reply){var ri=S.inv.filter(function(x){return x.id===S.reply})[0];h+='<div class="card"><h3>Client reply on #'+ri.id+'</h3><p class="mute" style="margin:4px 0 0">Paste what the client wrote. PayChaser spots the blocker and pauses chasing.</p><label for="rt">Reply</label><textarea id="rt" placeholder="e.g. We need a purchase order before we can pay"></textarea><div class="acts"><button class="btn" id="rsave">Analyse reply</button><button class="btn ghost" id="cancel">Cancel</button></div></div>'}
+ if(S.cp){var ci=S.inv.filter(function(x){return x.id===S.cp})[0];h+='<div class="card" style="border-color:var(--acc)"><div class="mute">What your client sees (preview, no account needed)</div><h3>Invoice #'+ci.id+' - '+m(ci.a)+'</h3><p style="margin:4px 0 8px">'+(late(ci)>0?'Payment overdue. ':'')+'We know things get busy. Choose what works for you.</p><div class="acts" style="flex-direction:column"><button class="btn" data-cr="pay">Pay securely</button><button class="btn ghost" data-cr="time">Request more time</button><button class="btn ghost" data-cr="inst">Request instalments</button><button class="btn ghost" data-cr="recv">I have not received the invoice</button><button class="btn ghost" data-cr="appr">Waiting for internal approval</button><button class="btn ghost" data-cr="q">Ask a question</button></div><label for="cd">Date you can pay (for more time)</label><input id="cd" type="date"><div class="acts"><button class="btn ghost" id="cancel">Close preview</button></div></div>'}
+ var list=S.inv.slice().sort(function(a,b){return(a.paid?1:0)-(b.paid?1:0)||a.due.localeCompare(b.due)});
+ h+=list.map(function(i){var l=late(i),st=i.paid?'<span class="pill ok">Paid</span>':l>0?'<span class="pill late">'+l+' days late</span>':'<span class="pill warn">Due in '+(-l)+' days</span>';
+  return'<div class="card"><div class="row"><div><b>'+esc(i.c)+'</b><div class="mute">#'+i.id+' · '+esc(i.d)+'</div></div><div style="text-align:right"><b>'+m(i.a)+'</b><div>'+st+'</div></div></div>'+
+  (i.paid?"":'<div class="acts"><button class="btn" data-chase="'+i.id+'">Chase</button><button class="btn ghost" data-reply="'+i.id+'">Client replied</button><button class="btn ghost" data-cp="'+i.id+'">Client page</button>'+(i.tx&&dd(i.tx,T)<0?'<button class="btn ghost" data-nl="'+i.id+'">New client link</button>':'')+'<button class="btn ghost" data-paid="'+i.id+'">Mark paid</button></div>')+
+  (i.n?'<div class="mute" style="margin-top:8px">'+i.n+' reminder'+(i.n>1?"s":"")+' sent</div>':"")+(i.p&&!i.paid?'<div class="'+(broken(i)?"late":"mute")+'" style="margin-top:4px;font-size:13px">'+(broken(i)?"Missed promise to pay on ":"Promised to pay on ")+i.p+'</div>':"")+(i.b&&!i.paid?'<div class="warn" style="margin-top:4px;font-size:13px">Blocker: '+BL[i.b].t+'. Chasing paused.</div>':"")+(i.r&&!i.paid?'<div class="warn" style="margin-top:4px;font-size:13px">Client '+esc(rqTxt(i.r))+'</div>'+(i.r.n?'<div class="mute" style="font-size:13px">Their note: '+esc(i.r.n)+'</div>':"")+'<div class="acts">'+(i.r.k==="recv"||i.r.k==="q"?'<button class="btn" data-ap="'+i.id+'" data-yes="1">Mark handled</button>':'<button class="btn" data-ap="'+i.id+'" data-yes="1">Approve</button><button class="btn ghost" data-ap="'+i.id+'" data-yes="0">Decline</button>')+'</div>':"")+'</div>'}).join("");
+ return h}
+function clis(){
+ var names=[];S.inv.forEach(function(i){if(names.indexOf(i.c)<0)names.push(i.c)});
+ names.sort(function(a,b){return score(a)-score(b)});
+ return'<h2 style="margin-bottom:12px">Clients</h2>'+names.map(function(c){var s=score(c),L=label(s),o=S.inv.filter(function(i){return i.c===c&&!i.paid}).reduce(function(t,i){return t+i.a},0);
+  return'<div class="card"><div class="row"><div><b>'+esc(c)+'</b><div class="mute">Usually pays '+Math.round(avgLate(c))+' days late · owes '+m(o)+'</div><div class="mute">'+onTime(c)+'% paid on time · '+kept(c)+'</div></div><div style="text-align:right"><div class="score '+L[1]+'">'+s+'</div><span class="pill '+L[1]+'">'+L[0]+'</span></div></div>'+
+  (s<45?'<p class="mute" style="margin:8px 0 0">Ask for a 50% deposit before starting new work.</p>':"")+'</div>'}).join("")}
+function render(){var nv=document.getElementById("nav"),tp=document.querySelector(".top");nv.style.display=S.cv?"none":"";tp.style.display=S.cv?"none":"";if(S.cv){clientView();return}
+ document.getElementById("view").innerHTML=S.tab==="today"?today():S.tab==="inv"?invs():clis();
+ [].forEach.call(document.querySelectorAll("nav button"),function(b){b.setAttribute("aria-current",b.dataset.t===S.tab)});
+ document.getElementById("cur").value=S.cur;wire()}
+function on(id,fn){var e=document.getElementById(id);if(e)e.onclick=fn}
+function wire(){[].forEach.call(document.querySelectorAll("[data-nl]"),function(b){b.onclick=function(){var i=S.inv.filter(function(x){return x.id===+b.dataset.nl})[0];i.tk=tok();i.tx=iso(30);i.ta=0;S.log.unshift("New secure link created for "+i.c+". The old link no longer works.");save();render()}});
+ [].forEach.call(document.querySelectorAll("[data-cp]"),function(b){b.onclick=function(){S.cv=+b.dataset.cp;render();window.scrollTo(0,0)}});
+ [].forEach.call(document.querySelectorAll("[data-cr]"),function(b){b.onclick=function(){var i=S.inv.filter(function(x){return x.id===S.cp})[0],k=b.dataset.cr,d=document.getElementById("cd").value;
+  if(k==="pay"){i.paid=T;S.log.unshift("Payment received via client page: "+m(i.a)+" from "+i.c)}
+  else{if(k==="time"&&!d){alert("Pick the date you can pay.");return}i.r={k:k,d:k==="time"?d:""};S.log.unshift(i.c+" "+rqTxt(i.r))}
+  S.cp=null;save();render()}});
+ [].forEach.call(document.querySelectorAll("[data-ap]"),function(b){b.onclick=function(){var i=S.inv.filter(function(x){return x.id===+b.dataset.ap})[0],ok=b.dataset.yes==="1";
+  if(ok){if(i.r.k==="time")i.p=i.r.d;else if(i.r.k==="inst"){i.p=iso(14);i.plan=1}else if(i.r.k==="appr")i.p=iso(7);S.log.unshift("Approved: "+i.c+" "+rqTxt(i.r))}else S.log.unshift("Declined: "+i.c+" "+rqTxt(i.r)+". Chasing resumes.");
+  i.r=null;save();render()}});
+ [].forEach.call(document.querySelectorAll("[data-q]"),function(b){b.onclick=function(){S.ans=answer(b.dataset.q);render()}});
+ on("rsave",function(){var ri=S.inv.filter(function(x){return x.id===S.reply})[0],k=classify(document.getElementById("rt").value);if(!k){alert("No clear blocker found. Reply to them yourself, or describe the issue in more detail.");return}ri.b=k;S.log.unshift("Blocker found on "+ri.c+": "+BL[k].t+". Chasing paused.");S.reply=null;save();render()});
+ [].forEach.call(document.querySelectorAll("[data-reply]"),function(b){b.onclick=function(){S.reply=+b.dataset.reply;S.chase=null;S.add=false;render();window.scrollTo(0,0)}});
+ var hz=document.getElementById("hz");if(hz)hz.onchange=function(){S.hz=+hz.value;render()};
+ var ip=document.getElementById("ip");if(ip)ip.onchange=function(){var t=document.getElementById("msg"),l="\n\nIf it helps, you can pay in two instalments: half now, half in 14 days.";t.value=ip.checked?t.value+l:t.value.split(l).join("")};
+ var ex=document.getElementById("ex");if(ex)ex.onchange=function(){S.exp=Math.max(0,+ex.value||0);render()};
+ var fc=document.getElementById("fc");if(fc)fc.oninput=function(){var n=fc.value.trim().toLowerCase(),c=null;S.inv.forEach(function(i){if(i.c.toLowerCase()===n)c=i.c});document.getElementById("hint").textContent=c?(score(c)<45?"Risky payer: usually "+Math.round(avgLate(c))+" days late. Ask for a 50% deposit.":"Usually pays "+Math.round(avgLate(c))+" days late."):""};
+ on("auto",function(){unpaid().filter(function(i){return late(i)>0&&!(i.p&&dd(i.p,T)>=0)&&!i.b&&!i.r}).forEach(function(i){i.n++;S.log.unshift(tone(late(i))+" reminder sent to "+i.c+" for "+m(i.a))});save();render()});
+ on("new",function(){S.add=true;S.chase=null;render()});on("cancel",function(){S.add=false;S.chase=null;S.reply=null;S.cp=null;render()});
+ on("save",function(){var c=document.getElementById("fc").value.trim(),a=+document.getElementById("fa").value;if(!c||!(a>0)){alert("Enter a client name and an amount above 0.");return}
+  S.inv.push({id:Math.max.apply(null,S.inv.map(function(i){return i.id}))+1,c:c,d:document.getElementById("fd").value.trim()||"Services",a:a,due:iso(+document.getElementById("fu").value||14),paid:null,n:0});S.add=false;save();render()});
+ on("send",function(){var i=S.inv.filter(function(x){return x.id===S.chase})[0];i.n++;i.b=null;if(document.getElementById("pr").value)i.p=document.getElementById("pr").value;S.log.unshift("Sent "+document.getElementById("ch").value+" reminder to "+i.c+" for "+m(i.a));S.chase=null;save();render()});
+ [].forEach.call(document.querySelectorAll("[data-chase]"),function(b){b.onclick=function(){S.chase=+b.dataset.chase;S.add=false;S.tab="inv";render();window.scrollTo(0,0)}});
+ [].forEach.call(document.querySelectorAll("[data-paid]"),function(b){b.onclick=function(){var i=S.inv.filter(function(x){return x.id===+b.dataset.paid})[0];i.paid=T;S.log.unshift("Payment received: "+m(i.a)+" from "+i.c);save();render()}})}
+document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t){S.tab=t;S.add=false;S.chase=null;render()}};
+document.getElementById("cur").onchange=function(e){S.cur=e.target.value;render()};
+render();
+</script>
+</body>
+</html>
