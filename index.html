@@ -99,7 +99,7 @@ body.cvmode{padding-left:0}
 <body>
 <canvas id="rain" aria-hidden="true"></canvas><main>
  <div class="top"><b>PayChaser</b>
-  <select id="cur" aria-label="Currency"><option>$</option><option>£</option><option>€</option><option>R</option></select></div>
+  <span id="who" class="mute" style="margin-left:auto;margin-right:10px;font-size:12.5px;max-width:38vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span><button class="btn ghost" id="lo" style="padding:6px 10px;margin-right:8px">Log out</button><select id="cur" aria-label="Currency"><option>$</option><option>£</option><option>€</option><option>R</option></select></div>
  <div id="view"></div>
 </main>
 <nav id="nav">
@@ -119,9 +119,10 @@ function seed(){S.inv=[
  {id:6,c:"Kora Labs",d:"Retainer (last)",a:3500,due:iso(-40),paid:iso(-28),n:2},
  {id:7,c:"Northwind Studio",d:"Logo",a:1200,due:iso(-60),paid:iso(-41),n:3},
  {id:8,c:"Bright Agency",d:"Audit",a:800,due:iso(-50),paid:iso(-49),n:0}]}
-try{var sv=localStorage.getItem("pc5");if(sv){var p=JSON.parse(sv);if(Array.isArray(p.inv)&&Array.isArray(p.log)){S.inv=p.inv;S.log=p.log}}}catch(e){}
-if(!S.inv.length)seed();
-function save(){try{localStorage.setItem("pc5",JSON.stringify({inv:S.inv,log:S.log}))}catch(e){}}
+function K(){return"pc5:"+(S.user||"")}
+function loadData(){S.inv=[];S.log=[];S.exp=12000;try{var sv=localStorage.getItem(K());if(sv){var p=JSON.parse(sv);if(Array.isArray(p.inv)&&Array.isArray(p.log)){S.inv=p.inv;S.log=p.log}}else seed()}catch(e){seed()}}
+
+function save(){try{localStorage.setItem(K(),JSON.stringify({inv:S.inv,log:S.log}))}catch(e){}}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
 function m(n){return S.cur+Math.round(n).toLocaleString("en-US")}
 function late(i){return i.paid?0:dd(T,i.due)}
@@ -207,6 +208,29 @@ function clientView(){
   else{i.r={k:k,d:k==="time"?d:"",n:n};S.log.unshift(i.c+" "+rqTxt(i.r))}
   save();render()}});
 }
+var enc=new TextEncoder();
+function hex(b){return Array.prototype.map.call(new Uint8Array(b),function(x){return("0"+x.toString(16)).slice(-2)}).join("")}
+function unhex(h){var a=new Uint8Array(h.length/2);for(var i=0;i<a.length;i++)a[i]=parseInt(h.substr(i*2,2),16);return a}
+function pbk(pw,salt){return crypto.subtle.importKey("raw",enc.encode(pw),"PBKDF2",false,["deriveBits"]).then(function(k){return crypto.subtle.deriveBits({name:"PBKDF2",salt:salt,iterations:150000,hash:"SHA-256"},k,256)}).then(hex)}
+function users(){try{return JSON.parse(localStorage.getItem("pc_users")||"{}")}catch(e){return{}}}
+function setUsers(u){try{localStorage.setItem("pc_users",JSON.stringify(u))}catch(e){}}
+function restore(){try{var s=JSON.parse(localStorage.getItem("pc_sess")||"null");if(s&&s.e&&s.x>Date.now()&&users()[s.e]){S.user=s.e;loadData()}else localStorage.removeItem("pc_sess")}catch(e){}}
+function enter(em){S.user=em;try{localStorage.setItem("pc_sess",JSON.stringify({e:em,x:Date.now()+7*864e5}))}catch(e){}loadData();S.tab="today";render();window.scrollTo(0,0)}
+function logout(){try{localStorage.removeItem("pc_sess")}catch(e){}S.user=null;S.cv=null;S.chase=null;S.add=false;S.reply=null;S.ans="";S.am="in";render();window.scrollTo(0,0)}
+function authView(){var up=S.am==="up";
+ document.getElementById("view").innerHTML='<div class="card" style="margin-top:8vh"><div class="mute">Welcome to</div><h2 style="font-size:28px;margin:2px 0 12px">PayChaser</h2><div class="acts" style="margin:0 0 6px"><button class="btn'+(up?' ghost':'')+'" id="tin">Log in</button><button class="btn'+(up?'':' ghost')+'" id="tup">Create account</button></div><label for="ae">Email</label><input id="ae" type="email" autocomplete="email" inputmode="email"><label for="ap">Password'+(up?' (at least 8 characters)':'')+'</label><input id="ap" type="password" autocomplete="'+(up?'new-password':'current-password')+'">'+(up?'<label for="ap2">Confirm password</label><input id="ap2" type="password" autocomplete="new-password">':'')+'<div id="aerr" class="late" style="margin-top:8px;min-height:20px" role="alert"></div><div class="acts"><button class="btn" id="ago">'+(up?'Create account':'Log in')+'</button></div><p class="mute" style="margin:12px 0 0;font-size:12.5px">Prototype notice: accounts are stored only in this browser, so this is not real security. Do not use a password you use anywhere else. Each new account starts with sample data.</p></div>';
+ on("tin",function(){S.am="in";render()});on("tup",function(){S.am="up";render()});
+ function go(){var er=document.getElementById("aerr"),em=document.getElementById("ae").value.trim().toLowerCase(),pw=document.getElementById("ap").value;er.textContent="";
+  if(Date.now()<(S.lock||0)){er.textContent="Too many attempts. Try again in "+Math.ceil((S.lock-Date.now())/1000)+" seconds.";return}
+  if(em.length>120||!/^[^@ ]+@[^@ ]+$/.test(em)){er.textContent="Enter a valid email address.";return}
+  if(up){if(pw.length<8){er.textContent="Use at least 8 characters for your password.";return}
+   if(pw!==document.getElementById("ap2").value){er.textContent="The passwords do not match.";return}
+   var u=users();if(u[em]){er.textContent="An account with this email already exists. Try logging in.";return}
+   var salt=new Uint8Array(16);crypto.getRandomValues(salt);
+   pbk(pw,salt).then(function(h){u[em]={s:hex(salt),h:h,t:Date.now()};setUsers(u);enter(em)}).catch(function(){er.textContent="Could not create the account in this browser."})}
+  else{var rec=users()[em],salt2=rec?unhex(rec.s):new Uint8Array(16);
+   pbk(pw,salt2).then(function(h){if(rec&&h===rec.h){S.fails=0;enter(em)}else{S.fails=(S.fails||0)+1;if(S.fails>=5){S.lock=Date.now()+30000;S.fails=0}er.textContent="Email or password is incorrect."}}).catch(function(){er.textContent="Could not check the password in this browser."})}}
+ on("ago",go);document.getElementById("ap").onkeydown=function(e){if(e.key==="Enter")go()}}
 var PLAN=15;
 function recovered(){return S.inv.filter(function(i){return i.paid&&i.n>0}).reduce(function(s,i){return s+i.a},0)}
 function priority(i){return i.a*(1+late(i)/7)*(2-score(i.c)/100)}
@@ -255,7 +279,7 @@ function clis(){
  return'<h2 style="margin-bottom:12px">Clients</h2>'+names.map(function(c){var s=score(c),L=label(s),o=S.inv.filter(function(i){return i.c===c&&!i.paid}).reduce(function(t,i){return t+i.a},0);
   return'<div class="card"><div class="row"><div><b>'+esc(c)+'</b><div class="mute">Usually pays '+Math.round(avgLate(c))+' days late · owes '+m(o)+'</div><div class="mute">'+onTime(c)+'% paid on time · '+kept(c)+'</div></div><div style="text-align:right"><div class="score '+L[1]+'">'+s+'</div><span class="pill '+L[1]+'">'+L[0]+'</span></div></div>'+
   (s<45?'<p class="mute" style="margin:8px 0 0">Ask for a 50% deposit before starting new work.</p>':"")+'</div>'}).join("")}
-function render(){var nv=document.getElementById("nav"),tp=document.querySelector(".top");nv.style.display=S.cv?"none":"";tp.style.display=S.cv?"none":"";document.body.className=S.cv?"cvmode":"";document.getElementById("view").className=S.cv?"cv":"";if(S.cv){clientView();return}
+function render(){var nv=document.getElementById("nav"),tp=document.querySelector(".top");var so=!S.user;document.getElementById("who").textContent=S.user||"";nv.style.display=(S.cv||so)?"none":"";tp.style.display=(S.cv||so)?"none":"";document.body.className=(S.cv||so)?"cvmode":"";document.getElementById("view").className=(S.cv||so)?"cv":"";if(so){authView();return}if(S.cv){clientView();return}
  document.getElementById("view").innerHTML=S.tab==="today"?today():S.tab==="inv"?invs():clis();
  [].forEach.call(document.querySelectorAll("nav button"),function(b){b.setAttribute("aria-current",b.dataset.t===S.tab)});
  document.getElementById("cur").value=S.cur;wire()}
@@ -284,7 +308,7 @@ function wire(){[].forEach.call(document.querySelectorAll("[data-nl]"),function(
  [].forEach.call(document.querySelectorAll("[data-chase]"),function(b){b.onclick=function(){S.chase=+b.dataset.chase;S.add=false;S.tab="inv";render();window.scrollTo(0,0)}});
  [].forEach.call(document.querySelectorAll("[data-paid]"),function(b){b.onclick=function(){var i=S.inv.filter(function(x){return x.id===+b.dataset.paid})[0];i.paid=T;S.log.unshift("Payment received: "+m(i.a)+" from "+i.c);save();render()}})}
 document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.target.dataset.t;if(t){S.tab=t;S.add=false;S.chase=null;render()}};
-document.getElementById("cur").onchange=function(e){S.cur=e.target.value;render()};
+document.getElementById("cur").onchange=function(e){S.cur=e.target.value;render()};restore();document.getElementById("lo").onclick=logout;
 render();
 </script>
 <script>
