@@ -48,9 +48,56 @@ textarea{min-height:120px;resize:vertical}
 .empty{color:var(--mute);padding:8px 0}
 @media (prefers-reduced-motion:no-preference){.age i{transition:width .5s}}
 </style>
-</head>
+<meta name="theme-color" content="#07090c"><style>
+:root:root:root{--bg:#07090c;--card:rgba(16,18,23,.74);--ink:#f2eee7;--mute:#9a9ba5;--line:rgba(255,255,255,.09);--ok:#3ddc97;--late:#ff5d73;--warn:#ffb020;--acc:#ff7a1a;--accInk:#1a0d04;color-scheme:dark}
+html{background:#07090c}
+body{background:radial-gradient(1100px 560px at 15% -12%,rgba(120,135,160,.26),transparent 62%),radial-gradient(900px 520px at 90% 112%,rgba(255,122,26,.17),transparent 62%),linear-gradient(180deg,#0b0e13,#06070a) fixed;min-height:100vh;-webkit-font-smoothing:antialiased}
+#rain{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+main{position:relative;z-index:1;padding:18px 16px 24px}
+.top{margin-bottom:18px}
+.top b{display:flex;align-items:center;font-size:19px;letter-spacing:-.02em}
+.top b:before{content:"";width:11px;height:11px;margin-right:10px;background:var(--acc);border-radius:0 50% 50% 50%;transform:rotate(-45deg);box-shadow:0 0 14px rgba(255,122,26,.7)}
+h3{font-size:16px}
+.card{background:var(--card);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:18px;padding:16px;margin:0 0 14px;box-shadow:0 12px 32px rgba(0,0,0,.4);break-inside:avoid}
+.hero{padding:8px 2px 20px}
+.hero .big{background:linear-gradient(180deg,#fff 0%,#ffb980 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+.age{height:12px;border-radius:6px;background:rgba(255,255,255,.08)}
+.legend span:before{box-shadow:0 0 8px var(--c)}
+.pill{border-color:transparent;background:rgba(255,255,255,.08);padding:3px 10px}
+.pill.ok{background:rgba(61,220,151,.14)}.pill.late{background:rgba(255,93,115,.15)}.pill.warn{background:rgba(255,176,32,.15)}
+.btn{background:linear-gradient(180deg,#ff8f3d,#ff6a00);color:var(--accInk);border-radius:11px;padding:10px 16px;font-weight:700;box-shadow:0 6px 18px rgba(255,106,0,.28);transition:transform .15s,box-shadow .15s,filter .15s}
+.btn:hover{filter:brightness(1.08);box-shadow:0 8px 24px rgba(255,106,0,.4)}.btn:active{transform:translateY(1px)}
+.btn.ghost{background:rgba(255,255,255,.04);color:var(--ink);border:1px solid rgba(255,255,255,.16);box-shadow:none}
+.btn.ghost:hover{border-color:var(--acc);color:#ffb27a;box-shadow:none;filter:none}
+select,input,textarea{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:11px;color:var(--ink)}
+select option{background:#14161b;color:#f2eee7}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);outline:none;box-shadow:0 0 0 3px rgba(255,122,26,.22)}
+nav{z-index:5;background:rgba(10,12,16,.82);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border-top:1px solid var(--line)}
+nav button{border-radius:12px;transition:background .15s,color .15s;font-size:14px}
+nav button[aria-current="true"]{color:var(--acc);background:rgba(255,122,26,.12)}
+.bars i{background:linear-gradient(180deg,#ffa05a,#ff6a00);box-shadow:0 0 14px rgba(255,106,0,.35)}
+::selection{background:rgba(255,122,26,.4)}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.14);border-radius:8px}
+@media (hover:hover){.card{transition:border-color .2s}.card:hover{border-color:rgba(255,122,26,.35)}}
+@media (min-width:900px){
+body{padding-left:210px}
+main{max-width:1060px;padding:26px 28px 40px}
+#view{columns:2;column-gap:18px}
+#view>.hero,#view>h2,#view>.row:first-child{column-span:all}
+.top{justify-content:flex-end}.top b{display:none}
+nav{top:0;bottom:auto;right:auto;width:210px;height:100vh;flex-direction:column;justify-content:flex-start;gap:6px;padding:88px 14px 14px;border-top:0;border-right:1px solid var(--line)}
+nav button{flex:0 0 auto;text-align:left;padding:12px 14px}
+nav::before{content:"PayChaser";position:absolute;top:26px;left:38px;font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--ink)}
+nav::after{content:"";position:absolute;top:32px;left:20px;width:11px;height:11px;background:var(--acc);border-radius:0 50% 50% 50%;transform:rotate(-45deg);box-shadow:0 0 14px rgba(255,122,26,.7)}
+.big{font-size:56px}
+}
+body.cvmode{padding-left:0}
+#view.cv{columns:1;max-width:520px;margin:0 auto}
+@media (min-width:900px){body.cvmode main{max-width:600px}#view.cv{max-width:none}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head>
 <body>
-<main>
+<canvas id="rain" aria-hidden="true"></canvas><main>
  <div class="top"><b>PayChaser</b>
   <select id="cur" aria-label="Currency"><option>$</option><option>£</option><option>€</option><option>R</option></select></div>
  <div id="view"></div>
@@ -167,7 +214,7 @@ function broken(i){return!i.paid&&!!i.p&&dd(T,i.p)>0}
 function extra(){
  var r=recovered(),nx=S.inv.filter(function(i){return i.paid&&i.n>0}).length;
  var u=unpaid().filter(function(i){return late(i)>0}).sort(function(a,b){return priority(b)-priority(a)}).slice(0,3);
- var h='<div class="card"><h3>Paid after a reminder</h3><div class="big ok" style="font-size:32px">'+m(r)+'</div><p class="mute" style="margin:4px 0 0">'+nx+' invoices were paid once chasing started. That covers '+Math.floor(r/PLAN)+' months of a '+m(PLAN)+' plan. About '+(Math.round(S.inv.reduce(function(s,i){return s+i.n},0)*5/6)/10)+' hours of chasing saved at 5 minutes a reminder (estimate).</p></div>';
+ var h='<div class="card"><h3>Paid after a reminder</h3><div class="big ok" style="font-size:32px">'+m(r)+'</div><p class="mute" style="margin:4px 0 0">'+nx+' invoices were paid once chasing started. That is '+Math.floor(r/(PLAN*12))+'x the cost of a full year of the '+m(PLAN)+' plan. About '+(Math.round(S.inv.reduce(function(s,i){return s+i.n},0)*5/6)/10)+' hours of chasing saved at 5 minutes a reminder (estimate).</p></div>';
  h+=planHTML()+dueSoon();
  var in30=unpaid().reduce(function(s,i){return expDay(i)<=30?s+i.a:s},0),gap=S.exp-in30;
  h+='<div class="card"><h3>Cash check, next 30 days</h3><label for="ex">Your monthly costs</label><input id="ex" type="number" min="0" value="'+S.exp+'"><p style="margin:10px 0 0" class="'+(gap>0?'late':'ok')+'"><b>'+(gap>0?'Expected shortfall: '+m(gap)+'. Chase the invoices above first.':'Covered: you expect '+m(in30)+' against '+m(S.exp)+' of costs.')+'</b></p></div>';
@@ -208,7 +255,7 @@ function clis(){
  return'<h2 style="margin-bottom:12px">Clients</h2>'+names.map(function(c){var s=score(c),L=label(s),o=S.inv.filter(function(i){return i.c===c&&!i.paid}).reduce(function(t,i){return t+i.a},0);
   return'<div class="card"><div class="row"><div><b>'+esc(c)+'</b><div class="mute">Usually pays '+Math.round(avgLate(c))+' days late · owes '+m(o)+'</div><div class="mute">'+onTime(c)+'% paid on time · '+kept(c)+'</div></div><div style="text-align:right"><div class="score '+L[1]+'">'+s+'</div><span class="pill '+L[1]+'">'+L[0]+'</span></div></div>'+
   (s<45?'<p class="mute" style="margin:8px 0 0">Ask for a 50% deposit before starting new work.</p>':"")+'</div>'}).join("")}
-function render(){var nv=document.getElementById("nav"),tp=document.querySelector(".top");nv.style.display=S.cv?"none":"";tp.style.display=S.cv?"none":"";if(S.cv){clientView();return}
+function render(){var nv=document.getElementById("nav"),tp=document.querySelector(".top");nv.style.display=S.cv?"none":"";tp.style.display=S.cv?"none":"";document.body.className=S.cv?"cvmode":"";document.getElementById("view").className=S.cv?"cv":"";if(S.cv){clientView();return}
  document.getElementById("view").innerHTML=S.tab==="today"?today():S.tab==="inv"?invs():clis();
  [].forEach.call(document.querySelectorAll("nav button"),function(b){b.setAttribute("aria-current",b.dataset.t===S.tab)});
  document.getElementById("cur").value=S.cur;wire()}
@@ -240,5 +287,12 @@ document.getElementById("nav").onclick=function(e){var t=e.target.dataset&&e.tar
 document.getElementById("cur").onchange=function(e){S.cur=e.target.value;render()};
 render();
 </script>
-</body>
+<script>
+(function(){var c=document.getElementById("rain");if(!c||!c.getContext)return;var x=c.getContext("2d"),W=0,H=0,D=[],dpr=Math.min(2,window.devicePixelRatio||1),rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+function drop(r){return{x:Math.random()*(W+200)-100,y:r?Math.random()*H:-20,l:10+Math.random()*22,v:9+Math.random()*10,a:.12+Math.random()*.3,o:Math.random()<.08}}
+function size(){W=innerWidth;H=innerHeight;c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);var n=Math.min(300,Math.round(W*H/6500));D=[];for(var i=0;i<n;i++)D.push(drop(true))}
+function draw(){x.clearRect(0,0,W,H);for(var i=0;i<D.length;i++){var d=D[i];x.strokeStyle=d.o?"rgba(255,140,60,"+d.a+")":"rgba(190,205,225,"+d.a+")";x.lineWidth=d.o?1.2:1;x.beginPath();x.moveTo(d.x,d.y);x.lineTo(d.x-d.l*.18,d.y+d.l);x.stroke();if(!rm){d.y+=d.v;d.x-=d.v*.18;if(d.y>H)D[i]=drop(false)}}
+if(!rm)requestAnimationFrame(draw)}
+size();draw();addEventListener("resize",function(){size();if(rm)draw()})})();
+</script></body>
 </html>
